@@ -39,8 +39,9 @@ class CurrencyConverter():
           response = session.get(url, params=parameters)
           data = json.loads(response.text)
           amount = round(data['data'][crypto]['quote'][fiat]['price']*int_amount, 2)
-        except (ConnectionError, Timeout, TooManyRedirects) as e:
+        except (ConnectionError, Timeout, TooManyRedirects, KeyError) as e:
           print(e)
+          return -1
 
         return amount
 
@@ -69,14 +70,21 @@ class App(tk.Tk):
 
         # Retrieve list of currencies fron currency.txt
         with open('currencyList.txt') as f:
-            crypto_currency_line = f.readline()
-            fiat_currency_line = f.readline()
+            list = [line.split()[0] for line in f]
 
-        stripped_crypto_currency_line = crypto_currency_line.strip()
-        crypto_currency_list = stripped_crypto_currency_line.split()
+        currList = []
+        temp = []
+        for i in list:
+            temp.append(i)
+            if i == 'Fiat:':
+                currList.append(temp)
+                temp = []
+        if temp:
+            currList.append(temp)
 
-        stripped_fiat_currency_line = fiat_currency_line.strip()
-        fiat_currency_list = stripped_fiat_currency_line.split()
+        crypto_currency_list = currList[0]
+        crypto_currency_list = crypto_currency_list[1:-1]
+        fiat_currency_list = currList[1]
 
         # Dropdown
         self.crypto_currency_variable = StringVar(self)
@@ -122,10 +130,14 @@ class App(tk.Tk):
             converted_amount = amount
 
         else:
-            converted_amount = CurrencyConverter.convert(crypto_curr,fiat_curr,amount)
-            converted_amount = round(converted_amount, 2)
 
-        self.converted_amount_field.config(text = str(converted_amount))
+            converted_amount = CurrencyConverter.convert(crypto_curr,fiat_curr,amount)
+            if converted_amount == -1:
+                self.converted_amount_field.config(text = 'invalid currency code')
+            else:
+                converted_amount = round(converted_amount, 2)
+
+                self.converted_amount_field.config(text = str(converted_amount))
 
 
 if __name__ == '__main__':
